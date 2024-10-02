@@ -2,7 +2,7 @@
 // During decryption if the password is wrong. It will not output the file. File path is need to enter eg. D:\a.txt to store in txt form 
 // During encyption any file extension can use use eg. D:\a.bin or D:\a.dat
 // Password length is 4. 
-// Recommended software to run from are Visual Studio and Dev C++
+// Recommended software to run this are Visual Studio and Dev C++
 // This use Xor encryption 
 // No third party extension is need to run this program. 
 // Feel free to edit this for your use case :)
