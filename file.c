@@ -1,40 +1,33 @@
+// Usage press 1 to encrypt and 2 to decrypt. It will ask path to store the file as well as password.
+// During decryption if the password is wrong. It will not output the file. File path is need to enter eg. D:\a.txt to store in txt form 
+// During encyption any file extension can use use eg. D:\a.bin or D:\a.dat
+// Password length is 4. 
+// Recommended software to run from are Visual Studio and Dev C++
+// This use Xor encryption 
+// No third party extension is need to run this program. 
+// Feel free to edit this for your use case :)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <openssl/aes.h>
+#include <stdbool.h>
 
-// Function to pad the data if the input is not a multiple of AES block size (16 bytes)
-void pad_buffer(unsigned char* buffer, int* len) {
-    int padding = AES_BLOCK_SIZE - (*len % AES_BLOCK_SIZE);
-    for (int i = *len; i < *len + padding; i++) {
-        buffer[i] = padding;  // Pad with the value of the number of padding bytes
-    }
-    *len += padding;
-}
-
-// Function to encrypt a file using AES
-void encrypt_aes(const char* input_file, const char* output_file, const unsigned char* key) {
-    FILE* fin = fopen(input_file, "rb");
-    FILE* fout = fopen(output_file, "wb");
+void encrypt(const char *input_file, const char *output_file, const char *password) {
+    FILE *fin = fopen(input_file, "rb");
+    FILE *fout = fopen(output_file, "wb");
 
     if (fin == NULL || fout == NULL) {
         printf("Error opening file.\n");
         exit(1);
     }
 
-    AES_KEY encrypt_key;
-    AES_set_encrypt_key(key, 128, &encrypt_key);  // Set AES encryption key (128-bit)
+    char buffer;
+    int i = 0;
+    size_t password_len = strlen(password);
 
-    unsigned char inbuffer[AES_BLOCK_SIZE], outbuffer[AES_BLOCK_SIZE];
-    int len;
-
-    // Read the file, encrypt each block, and write to the output file
-    while ((len = fread(inbuffer, 1, AES_BLOCK_SIZE, fin)) > 0) {
-        if (len < AES_BLOCK_SIZE) {
-            pad_buffer(inbuffer, &len);  // Pad the last block if necessary
-        }
-        AES_encrypt(inbuffer, outbuffer, &encrypt_key);
-        fwrite(outbuffer, 1, AES_BLOCK_SIZE, fout);
+    while (fread(&buffer, 1, 1, fin)) {
+        buffer ^= password[i % password_len];  
+        fwrite(&buffer, 1, 1, fout);
+        i++;
     }
 
     fclose(fin);
@@ -43,26 +36,39 @@ void encrypt_aes(const char* input_file, const char* output_file, const unsigned
     printf("File successfully encrypted.\n");
 }
 
-// Function to decrypt a file using AES
-void decrypt_aes(const char* input_file, const char* output_file, const unsigned char* key) {
-    FILE* fin = fopen(input_file, "rb");
-    FILE* fout = fopen(output_file, "wb");
+bool check_password(const char *correct_password, const char *input_password) {
+    return strcmp(correct_password, input_password) == 0;
+}
+
+void decrypt(const char *input_file, const char *output_file, const char *password) {
+    char entered_password[5];
+
+    
+    printf("Enter the password to decrypt the file: ");
+    scanf("%4s", entered_password);
+
+   
+    if (!check_password(password, entered_password)) {
+        printf("Wrong password. Decryption failed.\n");
+        return;  
+    }
+
+    FILE *fin = fopen(input_file, "rb");
+    FILE *fout = fopen(output_file, "wb");
 
     if (fin == NULL || fout == NULL) {
         printf("Error opening file.\n");
         exit(1);
     }
 
-    AES_KEY decrypt_key;
-    AES_set_decrypt_key(key, 128, &decrypt_key);  // Set AES decryption key (128-bit)
+    char buffer;
+    int i = 0;
+    size_t password_len = strlen(password);
 
-    unsigned char inbuffer[AES_BLOCK_SIZE], outbuffer[AES_BLOCK_SIZE];
-    int len;
-
-    // Read the file, decrypt each block, and write to the output file
-    while ((len = fread(inbuffer, 1, AES_BLOCK_SIZE, fin)) > 0) {
-        AES_decrypt(inbuffer, outbuffer, &decrypt_key);
-        fwrite(outbuffer, 1, len, fout);
+    while (fread(&buffer, 1, 1, fin)) {
+        buffer ^= password[i % password_len];  
+        fwrite(&buffer, 1, 1, fout);
+        i++;
     }
 
     fclose(fin);
@@ -71,69 +77,45 @@ void decrypt_aes(const char* input_file, const char* output_file, const unsigned
     printf("Password is correct. File successfully decrypted.\n");
 }
 
-// Function to check if the entered password is correct
-bool check_password(const char* correct_password, const char* input_password) {
-    return strcmp(correct_password, input_password) == 0;
-}
-
 int main() {
-    char input_file[100], output_file[100], password[5];
-    unsigned char aes_key[16];  // AES key (128 bits = 16 bytes)
+    char input_file[100], output_file[100], password[5];  
     int choice;
     bool running = true;
 
     while (running) {
-        // Step 1: Select operation (Encrypt, Decrypt, or Exit)
+       
         printf("\nChoose an option:\n1. Encrypt file\n2. Decrypt file\n3. Exit program\nEnter your choice: ");
         scanf("%d", &choice);
 
         if (choice == 1) {
-            // Step 2: Enter file paths
+            
             printf("Enter the path of the input file: ");
             scanf("%s", input_file);
             printf("Enter the path of the output file: ");
             scanf("%s", output_file);
 
-            // Step 3: Add password (must be 4 characters)
+           
             printf("Enter a 4-character password: ");
-            scanf("%4s", password);
+            scanf("%4s", password);  
 
-            // Step 4: Create a 128-bit AES key (pad the password with null bytes)
-            memset(aes_key, 0, sizeof(aes_key));  // Initialize AES key buffer with zeroes
-            strncpy((char*)aes_key, password, 4);  // Copy the password into the AES key
+            
+            encrypt(input_file, output_file, password);
 
-            // Encrypt the file
-            encrypt_aes(input_file, output_file, aes_key);
-
-        }
-        else if (choice == 2) {
-            // Step 2: Enter file paths
+        } else if (choice == 2) {
+           
             printf("Enter the path of the input file: ");
             scanf("%s", input_file);
             printf("Enter the path of the output file: ");
             scanf("%s", output_file);
 
-            // Step 3: Ask for password to decrypt
-            printf("Enter the password to decrypt the file: ");
-            char entered_password[5];
-            scanf("%4s", entered_password);
+          
+            decrypt(input_file, output_file, password);
 
-            // Step 4: Verify if the password is correct
-            if (!check_password(password, entered_password)) {
-                printf("Wrong password. Decryption failed.\n");
-                continue;
-            }
-
-            // Step 5: Decrypt the file if the password is correct
-            decrypt_aes(input_file, output_file, aes_key);
-
-        }
-        else if (choice == 3) {
+        } else if (choice == 3) {
             printf("Exiting the program.\n");
-            running = false;  // Exit the loop
+            running = false;  
 
-        }
-        else {
+        } else {
             printf("Invalid choice. Please try again.\n");
         }
     }
